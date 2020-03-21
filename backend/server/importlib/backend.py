@@ -97,14 +97,31 @@ class Backend:
 
     # Note: postgres-specific implementation overrides this in PostgresBackend
     def processCapabilities(self, capabilityHash):
-        h = self.dbmodule.prepare("select lookup_package_capability(:name, :version) as id from dual")
-        for name, version in list(capabilityHash.keys()):
-            ver = version
-            if version is None or version == '':
-                ver = None
-            h.execute(name=name, version=ver)
-            row = h.fetchone_dict()
-            capabilityHash[(name, version)] = row['id']
+        sql = """
+            WITH wanted_capability(ordering, name, version) AS (VALUES %s),
+            inserted_capability AS (
+                INSERT INTO rhnPackageCapability(id, name, version)
+                    SELECT nextval('rhn_pkg_capability_id_seq'), name, version FROM wanted_capability ON CONFLICT DO NOTHING
+                    RETURNING id, name, version
+            )
+            SELECT wanted_capability.ordering, inserted_capability.id
+                FROM wanted_capability JOIN inserted_capability
+                    ON wanted_capability.name = inserted_capability.name
+                      AND wanted_capability.version IS NOT DISTINCT FROM inserted_capability.version
+                UNION (
+                    SELECT wanted_capability.ordering, rhnPackageCapability.id
+                        FROM wanted_capability JOIN rhnPackageCapability
+                            ON wanted_capability.name = rhnPackageCapability.name
+                                AND wanted_capability.version IS NOT DISTINCT FROM rhnPackageCapability.version
+                )
+                ORDER BY ordering
+        """
+        values = [(i, key[0], None if key[1] == '' else key[1]) for i, key in enumerate(capabilityHash.keys())]
+
+        h = self.dbmodule.prepare(sql)
+        r = h.execute_values(sql, values)
+        for i, key in enumerate(capabilityHash.keys()):
+            capabilityHash[key] = r[i][1]
 
     def processChangeLog(self, changelogHash):
         if CFG.has_key('package_import_skip_changelog') and CFG.package_import_skip_changelog:

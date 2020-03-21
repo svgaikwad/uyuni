@@ -158,6 +158,11 @@ class Cursor:
         """
         return self._execute_wrapper(self._executemany, *p, **kw)
 
+    def execute_values(self, sql, argslist, page_size=100):
+        """
+        """
+        return self._execute_wrapper(self._execute_values, sql, argslist, page_size)
+
     def execute_bulk(self, dict, chunk_size=100):
         """
         Uses executemany but chops the incoming dict into chunks for each
@@ -204,6 +209,9 @@ class Cursor:
         return self._execute_(args, kwargs)
 
     def _executemany(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def _execute_values(self, sql, argslist, page_size=100):
         raise NotImplementedError()
 
     def _execute_(self, args, kwargs):
