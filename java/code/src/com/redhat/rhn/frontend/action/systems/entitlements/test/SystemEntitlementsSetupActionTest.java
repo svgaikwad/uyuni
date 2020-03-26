@@ -39,15 +39,19 @@ import com.redhat.rhn.testing.ServerTestUtils;
 import com.redhat.rhn.testing.UserTestUtils;
 
 import com.suse.manager.virtualization.VirtManagerSalt;
+import com.suse.manager.webui.services.iface.SystemQuery;
+import com.suse.manager.webui.services.iface.TestVirtManager;
 import com.suse.manager.webui.services.impl.SaltSSHService;
 import com.suse.manager.webui.services.impl.SaltService;
 
+import com.suse.manager.webui.services.impl.runner.MgrUtilRunner;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.lib.legacy.ClassImposteriser;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * SystemEntitlementsSetupActionTest
@@ -67,10 +71,9 @@ public class SystemEntitlementsSetupActionTest extends RhnMockStrutsTestCase {
         Config.get().setBoolean(ConfigDefaults.KIWI_OS_IMAGE_BUILDING_ENABLED, "true");
         context.setImposteriser(ClassImposteriser.INSTANCE);
         saltServiceMock = context.mock(SaltService.class);
-        SaltService saltService = new SaltService();
         systemEntitlementManager = new SystemEntitlementManager(
                 new SystemUnentitler(),
-                new SystemEntitler(saltService, new VirtManagerSalt(saltService))
+                new SystemEntitler(saltServiceMock, new VirtManagerSalt(saltServiceMock))
         );
         setRequestPathInfo("/systems/SystemEntitlements");
         UserTestUtils.addManagement(user.getOrg());
