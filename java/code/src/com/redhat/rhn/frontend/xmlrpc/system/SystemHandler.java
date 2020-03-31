@@ -4962,6 +4962,13 @@ public class SystemHandler extends BaseHandler {
             }
             systemEntitlementManager.removeServerEntitlement(server, ent);
             needsSnapshot = true;
+
+            // Trigger handling for monitoring
+            server.asMinionServer().ifPresent(minion -> {
+                if (EntitlementManager.MONITORING.equals(ent)) {
+                    FormulaManager.getInstance().disableMonitoringOnEntitlementRemoval(minion);
+                }
+            });
         }
 
         // process base entitlements at the end
